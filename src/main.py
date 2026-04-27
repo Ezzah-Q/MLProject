@@ -28,17 +28,42 @@ def main():
     # get the dataset path from the second command line
     data_path = sys.argv[1]
 
-    # load data
-    print(f"\n Loading data from: {data_path}")
+    # load features (X) and labels (y) from data
+    print(f"\nLoading data from: {data_path}")
+    X, y = load_data(data_path)
 
     # split into training and testing data
+    print("\nSplit into train/test data")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # preprocess data
+    print("\nPreprocessing")
+    X_train_scaled, X_test_scaled, scaler = scale_features(X_train, X_test)
+    X_train_balanced, y_train_balanced    = apply_smote(X_train_scaled, y_train)
+
+    # create sequences
+    print("\nCreating sequences...")
+
+    # build and train model
+    print("\nTraining model...")
+
+    input_size = X_train_seq.shape[2]
+
+    model = LSTMModel(
+        input_size=input_size,
+        hidden_size=HIDDEN_SIZE,
+        num_layers=NUM_LAYERS,
+        learning_rate=LEARNING_RATE,
+    )
+
+    model.train(X_train_seq, y_train_seq, epochs=EPOCHS)
+
+    # evaluate model
+    print("\nEvaluating on test set...")
 
 
-    # preprocess
-    print()
-
-# create sequences
-
-# model
-
-# evaluate model
+if __name__ == "__main__":
+    main()
+    
