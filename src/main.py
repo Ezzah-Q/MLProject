@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import sys
  
 # Import each team member's file 
-from load_data   import load_data                  
+#from load_data   import load_data                  
 from preprocess  import scale_features, apply_smote  
 from sequences   import create_sequences            
 from model       import LSTMModel                  
@@ -30,7 +30,10 @@ def main():
 
     # load features (X) and labels (y) from data
     print(f"\nLoading data from: {data_path}")
-    X, y = load_data(data_path)
+    df = pd.read_csv(data_path)
+    # Split into features and label
+    X = df.drop(columns=['Class']).values
+    y = df['Class'].values
 
     # split into training and testing data
     print("\nSplit into train/test data")
