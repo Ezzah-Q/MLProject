@@ -35,47 +35,50 @@ def main():
     X = df.drop(columns=['Class']).values
     y = df['Class'].values
 
+    # Dataset metrics
+    print(f"Dataset shape: {df.shape}")
+    print(f"Fraud cases: {y.sum()}")
+
     # split into training and testing data
     print("\nSplit into train/test data")
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # preprocess data
+    # Training dataset metrics
+    print(f"X_train shape: {X_train.shape}")
+    print(f"X_test shape: {X_test.shape}")
+
+    # Preprocess data 
     print("\nPreprocessing")
     X_train_scaled, X_test_scaled, scaler = scale_features(X_train, X_test)
     X_train_balanced, y_train_balanced    = apply_smote(X_train_scaled, y_train)
+    
+    # After SMOTE dataset metrics
+    print(f"After SMOTE - X_train shape: {X_train_balanced.shape}")
+    print(f"After SMOTE - fraud cases: {y_train_balanced.sum()}")
 
     # create sequences
     print("\nCreating sequences...")
     X_train_seq, y_train_seq = create_sequences(X_train_balanced, y_train_balanced, WINDOW_SIZE)
     X_test_seq, y_test_seq   = create_sequences(X_test_scaled, y_test, WINDOW_SIZE)
     
-
     # build and train model
     print("\nTraining model...")
     input_size = X_train_seq.shape[2]
     model = LSTMModel(
-    input_size=input_size,
-    hidden_size=HIDDEN_SIZE,
-    num_layers=NUM_LAYERS,
-    learning_rate=LEARNING_RATE
-)
-
-    input_size = X_train_seq.shape[2]
-
-    model = LSTMModel(
         input_size=input_size,
         hidden_size=HIDDEN_SIZE,
         num_layers=NUM_LAYERS,
-        learning_rate=LEARNING_RATE,
+        learning_rate=LEARNING_RATE
     )
 
     model.train(X_train_seq, y_train_seq, epochs=EPOCHS)
 
     # evaluate model
     print("\nEvaluating on test set...")
-
+    y_pred, y_prob = model.predict(X_test_seq)
+    evaluate_model(y_test_seq, y_pred, y_prob)
 
 if __name__ == "__main__":
     main()
