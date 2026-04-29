@@ -48,11 +48,12 @@ def main():
 
     # create sequences
     print("\nCreating sequences...")
+    X_train_seq, y_train_seq = create_sequences(X_train_scaled, y_train, WINDOW_SIZE)
+    X_test_seq, y_test_seq = create_sequences(X_test_scaled, y_test, WINDOW_SIZE)
 
     # build and train model
     print("\nTraining model...")
 
-    input_size = X_train_seq.shape[2]
 
     model = LSTMModel(
         input_size=input_size,
@@ -65,7 +66,7 @@ def main():
 
     # evaluate model
     print("\nEvaluating on test set...")
-
+2
 
 if __name__ == "__main__":
     main()
