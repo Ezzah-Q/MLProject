@@ -154,3 +154,20 @@ class LSTMModel:
     Architecture:
         Input → [LSTM layers] → Final hidden state → Linear → Sigmoid → P(fraud)
     """
+    def __init__(self, input_size, hidden_size, num_layers, learning_rate):
+        self.input_size  = input_size
+        self.hidden_size = hidden_size
+        self.num_layers  = num_layers
+        self.lr          = learning_rate
+
+        # build a stack of LSTM cells, one per layer
+        # first layer takes the raw input, the rest take the hidden state from below
+        self.cells = []
+        for layer in range(num_layers):
+            in_size = input_size if layer == 0 else hidden_size
+            self.cells.append(LSTMCell(in_size, hidden_size))
+
+        # final dense layer: takes last hidden state and squashes to a single fraud probability
+        scale = 1 / np.sqrt(hidden_size)
+        self.Wy = np.random.uniform(-scale, scale, (1, hidden_size))
+        self.by = np.zeros((1, 1))   
