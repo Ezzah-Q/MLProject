@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -8,7 +9,11 @@ import sys
 from preprocess  import scale_features, apply_smote  
 from sequences   import create_sequences            
 from model       import LSTMModel                  
-from evaluation  import evaluate_model              
+from evaluation  import evaluate_model         
+
+# seed for reproducibility (so weight init + SMOTE stay consistent across runs)
+np.random.seed(42)
+     
 
 # hyperparameters (tune these)
 WINDOW_SIZE = 5        # how many transactions the model sees at once
@@ -65,6 +70,7 @@ def main():
     
     # build and train model
     print("\nTraining model...")
+ 
     input_size = X_train_seq.shape[2]
     model = LSTMModel(
         input_size=input_size,
@@ -79,6 +85,10 @@ def main():
     print("\nEvaluating on test set...")
     y_pred, y_prob = model.predict(X_test_seq)
     evaluate_model(y_test_seq, y_pred, y_prob)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 87579a78459174a4d6bbd52230a7370959a88866
 
 if __name__ == "__main__":
     main()
