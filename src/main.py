@@ -1,4 +1,3 @@
-from pyexpat import model
 
 import numpy as np
 import pandas as pd
@@ -10,7 +9,11 @@ import sys
 from preprocess  import scale_features, apply_smote  
 from sequences   import create_sequences            
 from model       import LSTMModel                  
-from evaluation  import evaluate_model              
+from evaluation  import evaluate_model         
+
+# seed for reproducibility (so weight init + SMOTE stay consistent across runs)
+np.random.seed(42)
+     
 
 # hyperparameters (tune these)
 WINDOW_SIZE = 5        # how many transactions the model sees at once
