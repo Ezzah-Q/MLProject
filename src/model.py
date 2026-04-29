@@ -214,84 +214,6 @@ class LSTMModel:
         #  values for backpropagation later
         cache_out = (caches, h_final, y_raw, X_seq)
         return y_pred, cache_out
-    
-    def train(self, X_train_seq, y_train_seq, epochs):
-        # loop through each epoch and restart total_loss
-        for epoch in range(epochs):
-            total_loss = 0
-
-        # loop through each window sequence for X_train 
-            for i in range(len(X_train_seq)):
-                # get the sequence window
-                X_sequence = X_train_seq[i]
-                # get the y output for that sequence
-                y_output = y_train_seq[i]
-
-                # run the LSTMmodel forward pass, get back fraud probability
-                y_predict, cache_out = self.forward(X_sequence)
-
-                # if y_output = 1 (yes fraud) then y_predict = 0.0 --> make sure log(0) don't occur in entropy loss calculation
-                y_predict_clipped = np.clip(y_predict, 1e-7, 1 - 1e-7)
-                # compute the binary cross entropy loss (-yi x log(p(yi)) + (1-yi) x log(1-p(yi)))
-                loss = -(y_output * np.log(y_predict_clipped) + (1 - y_output) * np.log(1 - y_predict_clipped))
-                total_loss += loss.item()
-
-                # start backpropogation --> calculate gradient of the loss
-                gradient = (y_predict - y_output) / (y_predict_clipped * (1 - y_predict_clipped))
-                # unpack cache from the forward pass
-                caches, h_final, y_raw, X_seq_saved = cache_out
-
-                # calculate how much we need to adjust the weights and bias of final layer to reduce loss
-                dWy = gradient * sigmoid_derivative(y_raw) * h_final.T
-                dby = gradient * sigmoid_derivative(y_raw)
-                # final error we send back toward other LSTM layers
-                dh_final = self.Wy.T * gradient * sigmoid_derivative(y_raw)
-
-                # update the outer layer weights and bias 
-                self.Wy -= self.lr * dWy
-                self.by -= self.lr * dby
-
-                # initialize gradients for hidden and cell state to 0
-                dh = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
-                dc = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
-                dh[-1] = dh_final
-
-                # loop from last timestep to the first one
-                for t in reversed(range(len(caches))):
-                    layer_caches = caches[t]
-
-                    # loop backwards through the layers
-                    for layer in reversed(range(self.num_layers)):
-                        # get the gradients for that cell's weights and error to pass back to prev layer
-                        dx, dh[layer], dc[layer], grads = self.cells[layer].backward(
-                            dh[layer], dc[layer], layer_caches[layer]
-                        )
-
-                        # update all the weights and biaes for that LSTM cell
-                        for param in ['Wf', 'bf', 'Wi', 'bi', 'Wg', 'bg', 'Wo', 'bo']:
-                            updated = getattr(self.cells[layer], param) - self.lr * grads[param]; setattr(self.cells[layer], param, updated)
-
-        # for all epochs compute avg loss
-        avg_loss = total_loss / len(X_train_seq)
-        print(f"Epoch {epoch + 1}/{epochs} loss: {avg_loss:.4f}")
-
-    def predict(self, X_test_seq):
-        # two empty lists: predict is for fraud/no fraud (1/0), prob is for the probabilites
-        y_predict_list = []
-        y_prob_list = []
-
-        # loop through every test sequence
-        for idx in range(len(X_test_seq)):
-            X_sequence = X_test_seq[idx]
-            # run the forward pass (we dont need cache)
-            y_prob, _ = self.forward(X_sequence)
-
-            # store probability and convert it to either 0 or 1 using 0.5 as cutoff
-            y_prob_list.append(y_prob.item())
-            y_predict_list.append(1 if y_prob.item() >= 0.5 else 0)
-
-        # convert to numpy arrays
-        return np.array(y_predict_list), np.array(y_prob_list)
    
     # backprop through time across all layers and all timesteps
     def backward(self, y_pred, y_true, cache_out):
@@ -350,3 +272,89 @@ class LSTMModel:
 
         return layer_grads, dWy, dby
 
+    def train(self, X_train_seq, y_train_seq, epochs):
+        epoch_losses = []
+
+        # loop through each epoch and restart total_loss
+        for epoch in range(epochs):
+            total_loss = 0
+
+        # loop through each window sequence for X_train 
+            for i in range(len(X_train_seq)):
+                # get the sequence window
+                X_sequence = X_train_seq[i]
+                # get the y output for that sequence
+                y_output = y_train_seq[i]
+
+                # run the LSTMmodel forward pass, get back fraud probability
+                y_predict, cache_out = self.forward(X_sequence)
+
+                # if y_output = 1 (yes fraud) then y_predict = 0.0 --> make sure log(0) don't occur in entropy loss calculation
+                y_predict_clipped = np.clip(y_predict, 1e-7, 1 - 1e-7)
+                # compute the binary cross entropy loss (-yi x log(p(yi)) + (1-yi) x log(1-p(yi)))
+                loss = -(y_output * np.log(y_predict_clipped) + (1 - y_output) * np.log(1 - y_predict_clipped))
+                total_loss += loss.item()
+
+                # start backpropogation --> calculate gradient of the loss
+                gradient = (y_predict - y_output) / (y_predict_clipped * (1 - y_predict_clipped))
+                # unpack cache from the forward pass
+                caches, h_final, y_raw, X_seq_saved = cache_out
+
+                # calculate how much we need to adjust the weights and bias of final layer to reduce loss
+                dWy = gradient * sigmoid_derivative(y_raw) * h_final.T
+                dby = gradient * sigmoid_derivative(y_raw)
+                # final error we send back toward other LSTM layers
+                dh_final = self.Wy.T * gradient * sigmoid_derivative(y_raw)
+
+                # update the outer layer weights and bias 
+                self.Wy -= self.lr * dWy
+                self.by -= self.lr * dby
+
+                # initialize gradients for hidden and cell state to 0
+                dh = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
+                dc = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
+                dh[-1] = dh_final
+
+                # loop from last timestep to the first one
+                for t in reversed(range(len(caches))):
+                    layer_caches = caches[t]
+
+                    # loop backwards through the layers
+                    for layer in reversed(range(self.num_layers)):
+                        # get the gradients for that cell's weights and error to pass back to prev layer
+                        dx, dh[layer], dc[layer], grads = self.cells[layer].backward(
+                            dh[layer], dc[layer], layer_caches[layer]
+                        )
+
+                        # update all the weights and biaes for that LSTM cell
+                        for param in ['Wf', 'bf', 'Wi', 'bi', 'Wg', 'bg', 'Wo', 'bo']:
+                            updated = getattr(self.cells[layer], param) - self.lr * grads[param]
+                            setattr(self.cells[layer], param, updated)
+
+            # for all epochs compute avg loss
+            avg_loss = total_loss / len(X_train_seq)
+            epoch_losses.append(avg_loss)
+
+        # print table at the end
+        print(f"\n{'Epoch':<10} {'Avg Loss':<10}")
+        print(f"{'-'*20}")
+        for epoch, loss in enumerate(epoch_losses):
+            print(f"{epoch+1:<10} {loss:<10.4f}")
+
+    def predict(self, X_test_seq):
+        # two empty lists: predict is for fraud/no fraud (1/0), prob is for the probabilites
+        y_predict_list = []
+        y_prob_list = []
+
+        # loop through every test sequence
+        for idx in range(len(X_test_seq)):
+            X_sequence = X_test_seq[idx]
+            # run the forward pass (we dont need cache)
+            y_prob, _ = self.forward(X_sequence)
+
+            # store probability and convert it to either 0 or 1 using 0.5 as cutoff
+            y_prob_list.append(y_prob.item())
+            y_predict_list.append(1 if y_prob.item() >= 0.5 else 0)
+
+        # convert to numpy arrays
+        return np.array(y_predict_list), np.array(y_prob_list)
