@@ -54,6 +54,13 @@ def main():
 
     # build and train model
     print("\nTraining model...")
+    input_size = X_train_seq.shape[2]
+    model = LSTMModel(
+    input_size=input_size,
+    hidden_size=HIDDEN_SIZE,
+    num_layers=NUM_LAYERS,
+    learning_rate=LEARNING_RATE
+)
 
     input_size = X_train_seq.shape[2]
 
@@ -68,8 +75,6 @@ def main():
 
     # evaluate model
     print("\nEvaluating on test set...")
-    y_pred, y_prob = model.predict(X_test_seq)
-    evaluate_model(y_test_seq, y_pred, y_prob)
 
 
 if __name__ == "__main__":

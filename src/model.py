@@ -171,3 +171,45 @@ class LSTMModel:
         scale = 1 / np.sqrt(hidden_size)
         self.Wy = np.random.uniform(-scale, scale, (1, hidden_size))
         self.by = np.zeros((1, 1))   
+    
+    # forward pass through the entire sequence and all layers
+    def forward(self, X_seq):
+        T = X_seq.shape[0]   # number of timesteps in this sequence
+
+        # initialize hidden and cell states for every layer to zero
+        h = []
+        c = []
+        for i in range(self.num_layers):
+            hidden = np.zeros((self.hidden_size, 1))
+            cell = np.zeros((self.hidden_size, 1))
+            h.append(hidden)
+            c.append(cell)
+        # we save everything per-timestep, per-layer so we can backprop later
+        caches = []
+
+        for t in range(T):
+            x_t = X_seq[t].reshape(-1, 1)   # column vector
+            layer_caches = []
+
+            for layer in range(self.num_layers):
+                if layer == 0:
+                    input_to_layer = x_t
+                else:
+                    input_to_layer = h[layer - 1]
+                h[layer], c[layer], cache = self.cells[layer].forward(
+                    input_to_layer, h[layer], c[layer]
+                )
+                layer_caches.append(cache)
+
+            caches.append(layer_caches)
+
+        # final output is based on the last hidden state of the top layer
+        h_final = h[-1]
+        y_raw = self.Wy @ h_final + self.by
+        y_pred = sigmoid(y_raw)
+        
+        
+        #this
+        cache_out = (caches, h_final, y_raw, X_seq)
+        return y_pred, cache_out
+
