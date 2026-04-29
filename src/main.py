@@ -85,10 +85,6 @@ def main():
     print("\nEvaluating on test set...")
     y_pred, y_prob = model.predict(X_test_seq)
     evaluate_model(y_test_seq, y_pred, y_prob)
-<<<<<<< HEAD
-=======
-
->>>>>>> 87579a78459174a4d6bbd52230a7370959a88866
 
 if __name__ == "__main__":
     main()
