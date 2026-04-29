@@ -53,7 +53,15 @@ def main():
 
     # build and train model
     print("\nTraining model...")
+    input_size = X_train_seq.shape[2]
+    model = LSTMModel(
+    input_size=input_size,
+    hidden_size=HIDDEN_SIZE,
+    num_layers=NUM_LAYERS,
+    learning_rate=LEARNING_RATE
+)
 
+    input_size = X_train_seq.shape[2]
 
     model = LSTMModel(
         input_size=input_size,
