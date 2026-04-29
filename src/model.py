@@ -191,16 +191,18 @@ class LSTMModel:
             x_t = X_seq[t].reshape(-1, 1)   # column vector
             layer_caches = []
 
+            # forward pass through each layer
             for layer in range(self.num_layers):
                 if layer == 0:
                     input_to_layer = x_t
+                    
+            # for the first layer, input is the raw data at this timestep
                 else:
                     input_to_layer = h[layer - 1]
                 h[layer], c[layer], cache = self.cells[layer].forward(
                     input_to_layer, h[layer], c[layer]
                 )
                 layer_caches.append(cache)
-
             caches.append(layer_caches)
 
         # final output is based on the last hidden state of the top layer
@@ -209,7 +211,65 @@ class LSTMModel:
         y_pred = sigmoid(y_raw)
         
         
-        #this
+        #  values for backpropagation later
         cache_out = (caches, h_final, y_raw, X_seq)
         return y_pred, cache_out
+    
+   
+    # backprop through time across all layers and all timesteps
+    def backward(self, y_pred, y_true, cache_out):
+        caches, h_final, y_raw, X_seq = cache_out # we saved this from the forward pass so we can compute gradients
+        T = X_seq.shape[0] # number of timesteps in this sequence
+
+        # binary cross entropy gradient w.r.t. y_raw simplifies to (y_pred - y_true)
+        dy_raw = y_pred - y_true
+
+        # gradients for the dense output layer
+        dWy = dy_raw @ h_final.T
+        dby = dy_raw
+        dh_final = self.Wy.T @ dy_raw
+
+        # accumulate gradients across timesteps for each layer
+        # one dict per layer, holding summed grads
+        layer_grads = [
+            {'Wf': np.zeros_like(cell.Wf), 'bf': np.zeros_like(cell.bf),
+             'Wi': np.zeros_like(cell.Wi), 'bi': np.zeros_like(cell.bi),
+             'Wg': np.zeros_like(cell.Wg), 'bg': np.zeros_like(cell.bg),
+             'Wo': np.zeros_like(cell.Wo), 'bo': np.zeros_like(cell.bo)}
+            for cell in self.cells
+        ]
+
+        # at the final timestep, only the top layer gets the gradient from the output layer
+        # for the rest of the layers and timesteps, the gradient from the output layer is zero
+        dh_next = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
+        dc_next = [np.zeros((self.hidden_size, 1)) for _ in range(self.num_layers)]
+        dh_next[-1] = dh_final   # only top layer at last timestep
+
+        # walk backwards through time
+        for t in reversed(range(T)):
+            layer_caches = caches[t]
+            # at each timestep we also walk top-down through the layer stack
+            dx_from_above = None
+            for layer in reversed(range(self.num_layers)):
+                # if not the top layer, the gradient from the layer above (same t) adds in
+                if dx_from_above is not None:
+                    dh_next[layer] = dh_next[layer] + dx_from_above
+                    
+                # compute gradients for this layer at this timestep
+                dx, dh_prev, dc_prev, grads = self.cells[layer].backward(
+                    dh_next[layer], dc_next[layer], layer_caches[layer]
+                )
+
+                # accumulate
+                for k in layer_grads[layer]:
+                    layer_grads[layer][k] += grads[k]
+
+                # set up gradients for the previous timestep
+                dh_next[layer] = dh_prev
+                dc_next[layer] = dc_prev
+
+                # this dx feeds into the layer below (at the same timestep)
+                dx_from_above = dx
+
+        return layer_grads, dWy, dby
 
