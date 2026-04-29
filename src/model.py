@@ -215,7 +215,6 @@ class LSTMModel:
         cache_out = (caches, h_final, y_raw, X_seq)
         return y_pred, cache_out
     
-<<<<<<< HEAD
     def train(self, X_train_seq, y_train_seq, epochs):
         # loop through each epoch and restart total_loss
         for epoch in range(epochs):
@@ -270,7 +269,7 @@ class LSTMModel:
 
                         # update all the weights and biaes for that LSTM cell
                         for param in ['Wf', 'bf', 'Wi', 'bi', 'Wg', 'bg', 'Wo', 'bo']:
-                            getattr(self.cells[layer], param) -= self.lr * grads[param]
+                            updated = getattr(self.cells[layer], param) - self.lr * grads[param]; setattr(self.cells[layer], param, updated)
 
         # for all epochs compute avg loss
         avg_loss = total_loss / len(X_train_seq)
@@ -293,7 +292,6 @@ class LSTMModel:
 
         # convert to numpy arrays
         return np.array(y_predict_list), np.array(y_prob_list)
-=======
    
     # backprop through time across all layers and all timesteps
     def backward(self, y_pred, y_true, cache_out):
@@ -351,5 +349,4 @@ class LSTMModel:
                 dx_from_above = dx
 
         return layer_grads, dWy, dby
->>>>>>> 87579a78459174a4d6bbd52230a7370959a88866
 
