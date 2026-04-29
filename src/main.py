@@ -48,6 +48,9 @@ def main():
 
     # create sequences
     print("\nCreating sequences...")
+    X_train_seq, y_train_seq = create_sequences(X_train_balanced, y_train_balanced, WINDOW_SIZE)
+    X_test_seq, y_test_seq   = create_sequences(X_test_scaled, y_test, WINDOW_SIZE)
+    
 
     # build and train model
     print("\nTraining model...")
@@ -65,6 +68,8 @@ def main():
 
     # evaluate model
     print("\nEvaluating on test set...")
+    y_pred, y_prob = model.predict(X_test_seq)
+    evaluate_model(y_test_seq, y_pred, y_prob)
 
 
 if __name__ == "__main__":
