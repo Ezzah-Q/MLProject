@@ -5,8 +5,10 @@ from imblearn.over_sampling import SMOTE
 def apply_smote(X_train, y_train):
     # Initialize SMOTE to random state
     smote = SMOTE(random_state = 42)
+
     # Balance
     X_sample, y_sample = smote.fit_resample(X_train, y_train)
+    
     # Return 
     return X_sample, y_sample
 
