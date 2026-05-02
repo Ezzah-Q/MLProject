@@ -137,10 +137,10 @@ class LSTMCell:
         }
  
         # combine gradients from all 4 gates
-        d_concat = (self.Wf.T @ df_raw +
-                    self.Wi.T @ di_raw +
-                    self.Wg.T @ dg_raw +
-                    self.Wo.T @ do_raw)
+        d_concat = (self.forget_weight.T @ df_raw +
+                    self.input_weight.T @ di_raw +
+                    self.cell_weight.T @ dg_raw +
+                    self.output_weight.T @ do_raw)
  
         # split combines gradients into dh_prev and dx
         dh_prev = d_concat[:self.hidden_size]
