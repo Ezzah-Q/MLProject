@@ -15,10 +15,10 @@ def tanh_derivative(x):
 """ 
 One LSTM cell that uses 4 gates 
 Gates:
-    f - forget gate : what to erase from cell state (long term memory)
-    i - input gate: how much new input to store
-    g - cell gate: what new input to store 
-    o - output gate: what to pass to next step
+    1. forget gate : what to erase from cell state (long term memory)
+    2. input gate: how much new input to store
+    3. cell gate: what new input to store 
+    4. output gate: what to pass to next step
 Each gate has W (weights) and b (bias)
 W has shape (hidden_size, hidden_size + input_size), in our case that is a matrix of [64, 30]
 """
@@ -35,60 +35,61 @@ class LSTMCell:
         # keep initial weights small and stable 
         scale = 1 / np.sqrt(hidden_size)
 
-        # initialize forget gate weight Wf and bias bf
-        self.Wf = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
-        self.bf = np.zeros((hidden_size, 1))
+        # initialize forget gate weight and bias 
+        self.forget_weight = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
+        self.forget_bias = np.zeros((hidden_size, 1))
 
-        # initialize input gate weight Wi and bias bi
-        self.Wi = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
-        self.bi = np.zeros((hidden_size, 1))
+        # initialize input gate weight and bias
+        self.input_weight = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
+        self.input_bias = np.zeros((hidden_size, 1))
 
-        # initialize cell gate weight Wg and bias bg
-        self.Wg = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
-        self.bg = np.zeros((hidden_size, 1))
+        # initialize cell gate weight and bias
+        self.cell_weight = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
+        self.cell_bias = np.zeros((hidden_size, 1))
 
-        # initialize output gate weight Wo and bias bo
-        self.Wo = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
-        self.bo = np.zeros((hidden_size, 1))
+        # initialize output gate weight and bias
+        self.output_weight = np.random.uniform(-scale, scale, (hidden_size, hidden_size + input_size))
+        self.output_bias = np.zeros((hidden_size, 1))
 
     
     """
     One forward step through the LSTM cell
     Inputs:
         x - input at current timestep, shape (input_size, 1)
-        h_prev - hidden state from previous step, shape (hidden_size, 1)
-        c_prev - cell state from previous step, shape (hidden_size, 1)
+        hidden_prev - hidden state from previous step, shape (hidden_size, 1)
+        cell_prev - cell state from previous step, shape (hidden_size, 1)
     Outputs:
-        h_next - new hidden state
-        c_next - new cell state
+        hidden_next - new hidden state
+        cell_next - new cell state
         cache - values saved for backpropagation
     """
-    def forward(self, x, h_prev, c_prev):
+    def forward(self, x, hidden_prev, cell_prev):
         # concatenate previous hidden state and current input
-        concat = np.vstack((h_prev, x))  
+        combined_stack = np.vstack((hidden_prev, x))  
 
         # gate calculations: multiple combined input with weight matrix and add bias
-        f_raw = self.Wf @ concat + self.bf
-        i_raw = self.Wi @ concat + self.bi
-        g_raw = self.Wg @ concat + self.bg
-        o_raw = self.Wo @ concat + self.bo
+        forget_sum = self.forget_weight @ combined_stack + self.forget_bias
+        input_sum = self.input_weight @ combined_stack + self.input_bias
+        cell_sum = self.cell_weight @ combined_stack + self.cell_bias
+        output_sum = self.output_weight @ combined_stack + self.output_bias
 
         # forget gate: 0=forget, 1=keep
-        f = sigmoid(f_raw)   
+        forget_val = sigmoid(forget_sum)   
         # input gate: 0=ignore, 1=store        
-        i = sigmoid(i_raw)
+        input_val = sigmoid(input_sum)
         # cell gate (candidate values from -1 to 1)             
-        g = np.tanh(g_raw) 
+        cell_val = np.tanh(cell_sum) 
         # output gate            
-        o = sigmoid(o_raw)             
+        output_val = sigmoid(output_sum)             
  
         # update outputs: cell state (long term memory) and hidden state (short term memory)
-        c_next = f * c_prev + i * g   
-        h_next = o * np.tanh(c_next)   
+        cell_next = forget_val * cell_prev + input_val * cell_val   
+        hidden_next = output_val * np.tanh(cell_next)   
  
         # store what we need for backpropagation
-        cache = (concat, f, i, g, o, f_raw, i_raw, g_raw, o_raw, c_prev, c_next)
-        return h_next, c_next, cache
+        cache = (combined_stack, forget_val, input_val, cell_val, output_val, forget_sum, input_sum, 
+                 cell_sum, output_sum, cell_prev, cell_next)
+        return hidden_next, cell_next, cache
 
 
     """
@@ -105,34 +106,34 @@ class LSTMCell:
     """
     def backward(self, dh_next, dc_next, cache):
         # unpack the cache
-        concat, f, i, g, o, f_raw, i_raw, g_raw, o_raw, c_prev, c_next = cache
+        combined_stack, forget_val, input_val, cell_val, output_val, forget_sum, input_sum, cell_sum, output_sum, cell_prev, cell_next = cache
  
         # how much output gate affected loss
-        do = dh_next * np.tanh(c_next)
-        do_raw = do * sigmoid_derivative(o_raw)
+        do = dh_next * np.tanh(cell_next)
+        do_raw = do * sigmoid_derivative(output_sum)
  
         # how much cell state affected loss
-        dc = dh_next * o * tanh_derivative(c_next) + dc_next
-        dc_prev = dc * f
+        dc = dh_next * output_val * tanh_derivative(cell_next) + dc_next
+        dc_prev = dc * forget_val
  
         # how much forget gate affected loss
-        df = dc * c_prev
-        df_raw = df * sigmoid_derivative(f_raw)
+        df = dc * cell_prev
+        df_raw = df * sigmoid_derivative(forget_sum)
  
         # how much input gate affected loss
-        di = dc * g
-        di_raw = di * sigmoid_derivative(i_raw)
+        di = dc * cell_val
+        di_raw = di * sigmoid_derivative(input_sum)
  
         # how much cell gate affected loss
-        dg = dc * i
-        dg_raw = dg * tanh_derivative(g_raw)
+        dg = dc * input_val
+        dg_raw = dg * tanh_derivative(cell_sum)
  
         # dictionary: how much each weight and bias needs to change
-        grads = {
-            'Wf': df_raw @ concat.T,  'bf': df_raw,
-            'Wi': di_raw @ concat.T,  'bi': di_raw,
-            'Wg': dg_raw @ concat.T,  'bg': dg_raw,
-            'Wo': do_raw @ concat.T,  'bo': do_raw,
+        gradients = {
+            'Wf': df_raw @ combined_stack.T,'bf': df_raw,
+            'Wi': di_raw @ combined_stack.T,'bi': di_raw,
+            'Wg': dg_raw @ combined_stack.T,'bg': dg_raw,
+            'Wo': do_raw @ combined_stack.T,'bo': do_raw,
         }
  
         # combine gradients from all 4 gates
@@ -143,9 +144,9 @@ class LSTMCell:
  
         # split combines gradients into dh_prev and dx
         dh_prev = d_concat[:self.hidden_size]
-        dx      = d_concat[self.hidden_size:]
+        dx = d_concat[self.hidden_size:]
  
-        return dx, dh_prev, dc_prev, grads
+        return dx, dh_prev, dc_prev, gradients
     
 class LSTMModel:
     """
