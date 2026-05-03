@@ -21,12 +21,7 @@ pip install numpy pandas scikit-learn imbalanced-learn
 How To Run:
 - Clone or download this repo
 - Go to //www.kaggle.com/datasets/mlg-ulb/creditcardfraud (make sure to be logged in) and download dataset
-- Place file in the root of the project directory, file structure should look like:
-  your-project-folder/
-      main.py
-      model.py
-      ...
-      creditcard.csv
+- Place file in the root of the project directory
 - Run program: python main.py creditcard.csv
 
 Ouput:
