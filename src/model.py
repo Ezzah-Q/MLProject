@@ -130,10 +130,10 @@ class LSTMCell:
  
         # dictionary: how much each weight and bias needs to change
         gradients = {
-            'Wf': df_raw @ combined_stack.T,'bf': df_raw,
-            'Wi': di_raw @ combined_stack.T,'bi': di_raw,
-            'Wg': dg_raw @ combined_stack.T,'bg': dg_raw,
-            'Wo': do_raw @ combined_stack.T,'bo': do_raw,
+            'forget_weight': df_raw @ combined_stack.T,'forget_bias': df_raw,
+            'input_weight': di_raw @ combined_stack.T,'input_bias': di_raw,
+            'cell_weight': dg_raw @ combined_stack.T,'cell_bias': dg_raw,
+            'output_weight': do_raw @ combined_stack.T,'output_bias': do_raw,
         }
  
         # combine gradients from all 4 gates
@@ -232,10 +232,10 @@ class LSTMModel:
         # accumulate gradients across timesteps for each layer
         # one dict per layer, holding summed grads
         layer_grads = [
-            {'Wf': np.zeros_like(cell.Wf), 'bf': np.zeros_like(cell.bf),
-             'Wi': np.zeros_like(cell.Wi), 'bi': np.zeros_like(cell.bi),
-             'Wg': np.zeros_like(cell.Wg), 'bg': np.zeros_like(cell.bg),
-             'Wo': np.zeros_like(cell.Wo), 'bo': np.zeros_like(cell.bo)}
+            {'forget_weight': np.zeros_like(cell.forget_weight), 'forget_bias': np.zeros_like(cell.forget_bias),
+             'input_weight': np.zeros_like(cell.input_weight), 'input_bias': np.zeros_like(cell.input_bias),
+             'cell_weight': np.zeros_like(cell.cell_weight), 'cell_bias': np.zeros_like(cell.cell_bias),
+             'output_weight': np.zeros_like(cell.output_weight), 'output_bias': np.zeros_like(cell.output_bias)}
             for cell in self.cells
         ]
 
@@ -328,7 +328,7 @@ class LSTMModel:
                         )
 
                         # update all the weights and biaes for that LSTM cell
-                        for param in ['Wf', 'bf', 'Wi', 'bi', 'Wg', 'bg', 'Wo', 'bo']:
+                        for param in ['forget_weight', 'forget_bias', 'input_weight', 'input_bias', 'cell_weight', 'cell_bias', 'output_weight', 'output_bias']:
                             updated = getattr(self.cells[layer], param) - self.lr * grads[param]
                             setattr(self.cells[layer], param, updated)
 
