@@ -95,58 +95,55 @@ class LSTMCell:
     """
     Backpropagation through time (BPTT) for one LSTM cell step.
     Inputs:
-        dh_next - error from h_next
-        dc_next - error from c_next
+        hidden_loss_grad - error from hidden_next
+        cell_loss_grad - error from cell_next
         cache - saved values from forward pass
     Outputs:
-        dx - gradient w.r.t. input x
-        dh_prev - gradient w.r.t. h_prev
-        dc_prev - gradient w.r.t. c_prev
-        grads - dict of gradients for all weights and biases
+        x_loss_grad - gradient w.r.t. input x
+        prev_hidden_loss_grad - gradient w.r.t. hidden_prev
+        prev_c_loss_grad - gradient w.r.t. cell_prev
+        gradients - dict of gradients for all weights and biases
+    Note: grad in variable names stands for gradient
     """
-    def backward(self, dh_next, dc_next, cache):
+    def backward(self, hidden_loss_grad, cell_loss_grad, cache):
         # unpack the cache
         combined_stack, forget_val, input_val, cell_val, output_val, forget_sum, input_sum, cell_sum, output_sum, cell_prev, cell_next = cache
  
+        # how much cell state affected loss (cell state = c)
+        current_c_loss_grad = hidden_loss_grad * output_val * tanh_derivative(cell_next) + cell_loss_grad
+        prev_c_loss_grad = current_c_loss_grad * forget_val
+
         # how much output gate affected loss
-        do = dh_next * np.tanh(cell_next)
-        do_raw = do * sigmoid_derivative(output_sum)
- 
-        # how much cell state affected loss
-        dc = dh_next * output_val * tanh_derivative(cell_next) + dc_next
-        dc_prev = dc * forget_val
+        output_loss_grad = hidden_loss_grad * np.tanh(cell_next) * sigmoid_derivative(output_sum)
  
         # how much forget gate affected loss
-        df = dc * cell_prev
-        df_raw = df * sigmoid_derivative(forget_sum)
+        forget_loss_grad = current_c_loss_grad * cell_prev * sigmoid_derivative(forget_sum)
  
         # how much input gate affected loss
-        di = dc * cell_val
-        di_raw = di * sigmoid_derivative(input_sum)
+        input_loss_grad = current_c_loss_grad * cell_val * sigmoid_derivative(input_sum)
  
         # how much cell gate affected loss
-        dg = dc * input_val
-        dg_raw = dg * tanh_derivative(cell_sum)
+        cell_loss_grad = current_c_loss_grad * input_val * tanh_derivative(cell_sum)
  
         # dictionary: how much each weight and bias needs to change
         gradients = {
-            'forget_weight': df_raw @ combined_stack.T,'forget_bias': df_raw,
-            'input_weight': di_raw @ combined_stack.T,'input_bias': di_raw,
-            'cell_weight': dg_raw @ combined_stack.T,'cell_bias': dg_raw,
-            'output_weight': do_raw @ combined_stack.T,'output_bias': do_raw,
+            'forget_weight': forget_loss_grad @ combined_stack.T,'forget_bias': forget_loss_grad,
+            'input_weight': input_loss_grad @ combined_stack.T,'input_bias': input_loss_grad,
+            'cell_weight': cell_loss_grad @ combined_stack.T,'cell_bias': cell_loss_grad,
+            'output_weight': output_loss_grad @ combined_stack.T,'output_bias': output_loss_grad,
         }
  
         # combine gradients from all 4 gates
-        d_concat = (self.forget_weight.T @ df_raw +
-                    self.input_weight.T @ di_raw +
-                    self.cell_weight.T @ dg_raw +
-                    self.output_weight.T @ do_raw)
+        combine_grads = (self.forget_weight.T @ forget_loss_grad +
+                    self.input_weight.T @ input_loss_grad +
+                    self.cell_weight.T @ cell_loss_grad +
+                    self.output_weight.T @ output_loss_grad)
  
         # split combines gradients into dh_prev and dx
-        dh_prev = d_concat[:self.hidden_size]
-        dx = d_concat[self.hidden_size:]
+        prev_hidden_loss_grad = combine_grads[:self.hidden_size]
+        x_loss_grad = combine_grads[self.hidden_size:]
  
-        return dx, dh_prev, dc_prev, gradients
+        return x_loss_grad, prev_hidden_loss_grad, prev_c_loss_grad, gradients
     
 class LSTMModel:
     """
