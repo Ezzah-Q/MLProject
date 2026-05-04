@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import sys
- 
+import gdown
+from pathlib import Path
+
 # Import each team member's file               
 from preprocess  import scale_features, apply_smote  
 from sequences   import create_sequences            
@@ -13,22 +15,28 @@ from evaluation  import evaluate_model
 np.random.seed(42)
 
 # hyperparameters (tune these)
-WINDOW_SIZE = 3        # how many transactions the model sees at once
+WINDOW_SIZE = 5        # how many transactions the model sees at once
 HIDDEN_SIZE = 64       # size of the hidden state vector
-NUM_LAYERS = 2         # number of stacked LSTM layers
-LEARNING_RATE = 0.001  # how fast the model updates weights
-EPOCHS = 5            # how many times to loop through training data
+NUM_LAYERS = 1         # number of stacked LSTM layers
+LEARNING_RATE = 0.0001  # how fast the model updates weights
+EPOCHS = 10            # how many times to loop through training data
 
 
 def main():
-    # make sure user types in 2 commands
-    if len(sys.argv) !=2:
-        print("Usage: python main.py <path_to_dataset>")
-        print("Example: python main/py data/creditcard.csv")
+    # if the user does not type in a dataset path, download the dataset from google drive
+    if len(sys.argv) == 1:
+        print("downloading dataset from google drive...")
+        GOOGLE_DRIVE_FILE_ID = "1-BQCqkGzJLl_ARyi3Q1U1mc03aXc6DNs"
+        data_path = "creditcard.csv"
+        gdown.download(id=GOOGLE_DRIVE_FILE_ID, output=data_path, quiet=False)
+    # if the user types in a dataset path, use that instead
+    elif len(sys.argv) == 2:
+        # get the dataset path from the second command line if it is provided
+        data_path = sys.argv[1]
+    # else, if the user types in more than 2 command line arguments, print usage and exit
+    else:
+        print("Usage: python main.py <path_to_dataset> (to use existing dataset) || python main.py (to download dataset from google drive)")
         sys.exit(1)
-    
-    # get the dataset path from the second command line
-    data_path = sys.argv[1]
 
     # load features (X) and labels (y) from data
     print(f"\nLoading data from: {data_path}")
@@ -88,6 +96,11 @@ def main():
     print("\nEvaluating on test set...")
     y_pred, y_prob = model.predict(X_test_seq)
     evaluate_model(y_test_seq, y_pred, y_prob)
+    
+    # deleting the downloaded dataset
+    if len(sys.argv) != 2:
+        Path(data_path).unlink()
+        print(f"\nDeleted downloaded dataset: {data_path}")
 
 if __name__ == "__main__":
     main()
