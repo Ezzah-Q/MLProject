@@ -12,14 +12,20 @@ Requirements
 - pandas
 - scikit-learn
 - imbalanced-learn
+- gdown
 
 Install dependencies with:
-pip install numpy pandas scikit-learn imbalanced-learn
+pip install numpy pandas scikit-learn imbalanced-learn gdown
 
 (We also have a requirements.txt)
+pip install -r requirements.txt
 
 How To Run:
 - Clone or download this repo
+- Choose option 1 (choose the automatically linked public google drive folder) or 2 (download the dataset locally)
+- 1:
+- Run program: python main.py
+- 2: 
 - Go to //www.kaggle.com/datasets/mlg-ulb/creditcardfraud (make sure to be logged in) and download dataset
 - Place file in the root of the project directory
 - Run program: python main.py creditcard.csv
